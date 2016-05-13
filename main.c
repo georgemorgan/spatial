@@ -12,9 +12,14 @@
 
 #define LENGTH 100
 
-typedef struct _vertex {
-	float x, y, z;
-} vertex;
+/* Describes the location of and viewing angles of a camera. */
+struct _camera { float x, y, z, tx, ty; };
+
+/* A point in 3D space. */
+struct _p3d { float x, y, z; };
+
+/* A point int 2D space. */
+struct _p2d { float x, y; };
 
 void line(SDL_Renderer *renderer, int x1, int y1, int x2, int y2, int r, int g, int b) {
 	
@@ -59,6 +64,16 @@ int main(int argc, char *argv[]) {
 	/* Create an SDL_Event to listen for a quit request. */
 	SDL_Event event;
 
+	/* Previous mouse positions. */
+	int pmx, pmy;
+	pmx = pmy = 0;
+
+	/* Create the camera. */
+	struct _camera camera = { 0, 0, 0, 0, 0 };
+
+	/* Obtain the center of the screen, and use it as the origin. */
+	struct _p2d origin = { WIDTH / 2, HEIGHT / 2};
+
 	/* Draw the screen in a loop. */
 	while (1) {
 		
@@ -74,12 +89,16 @@ int main(int argc, char *argv[]) {
 			else if (event.type == SDL_KEYDOWN) {
 				switch (event.key.keysym.sym) {
 					case SDLK_LEFT:
+						camera.x -= 5;
 						break;
 					case SDLK_RIGHT:
+						camera.x += 5;
 						break;
 					case SDLK_UP:
+						camera.z += 5;
 						break;
 					case SDLK_DOWN:
+						camera.z -= 5;
 						break;
 					default:
 						break;
@@ -92,50 +111,57 @@ int main(int argc, char *argv[]) {
 
 			/* ~~~ RENDERING BEGIN ~~~ */
 
-			vertex cube[] = {
-				{ 0, 0, 0 }, { 1, 0, 0 },
-				{ 1, 1, 0 }, { 0, 1, 0 },
-				{ 0, 0, 1 }, { 1, 0, 1 },
-				{ 1, 1, 1 }, { 0, 1, 1 },
+			struct _p3d cube[] = {
+				{ 50, 50, 50 }, { 100, 50, 50 },
+				{ 100, 100, 50 }, { 50, 100, 50 },
+				{ 50, 50, 100 }, { 100, 50, 100 },
+				{ 100, 100, 100 }, { 50, 100, 100 },
 			};
-
-			/* Obtain the center of the screen, and use it as the origin. */
-			uint32_t cx = WIDTH / 2, cy = HEIGHT / 2;
+			uint32_t vertices = (sizeof(cube) / sizeof(struct _p3d));
+			struct _p2d projection[vertices];
 
 			/* Obtain the x and y location of the mouse. */
 			int mx, my;
 			SDL_GetMouseState(&mx, &my);
+			/* Skip rendering if nothing has changed. */
+			//if (mx == pmx && my == pmy) continue;
+			/* Save the new position. */
+			pmx = mx, pmy = my;
 
-			/* Map the mouse position to the input range of sin and cosine. */
-			float tx = map(mx, 0, WIDTH, -M_PI_2, M_PI_2);
-			float sin_tx = sin(tx), cos_tx = cos(tx);
-			float ty = map(my, 0, WIDTH, -1, 1);
-			float sin_ty = sin(ty), cos_ty = cos(ty);
+
+
+			/* Map the mouse position to the input range of -1 to 1 for the output of sin and cosine. */
+			float tx = map(mx, 0, WIDTH, 0, 2 * M_PI);
+			float stx = sin(tx), ctx = cos(tx);
+			float ty = map(my, 0, WIDTH, 0, 2 * M_PI);
+			float sty = sin(ty), cty = cos(ty);
+
+			/* Calculate the viewing angles of the camera. */
+
+			printf("tx: %f, stx: %f, ctx: %f\n", tx, stx, ctx);
+			printf("ty: %f, sty: %f, cty: %f\n", ty, sty, cty);
 
 			/* Iterate through the verticies, transforming them one at a time. */
-			for (int v = 0; v < (sizeof(cube) / sizeof(vertex)); v ++) {
+			for (int v = 0; v < vertices; v ++) {
 				/* Make the edges longer. */
-				cube[v].x *= LENGTH, cube[v].y *= LENGTH, cube[v].z *= LENGTH;
 
-				/* Transform the X and Y coordinates to rotate around the Z axis. */
-				cube[v].x = cube[v].y * cos_tx - cube[v].x * sin_tx;
-				cube[v].y = cube[v].x * cos_tx + cube[v].y * sin_tx;
-
-				/* Transform the X and Y coordinates to rotate around the Y axis. */
-//				cube[v].x = cube[v].x * cos_ty - cube[v].z * sin_ty;
-//				cube[v].y = cube[v].z * cos_ty + cube[v].x * sin_ty;
+				/* Transform the X and Y coordinates to rotate around the X axis. */
+//				cube[v].x = cube[v].y * ctx - cube[v].z * stx;
+				cube[v].y = cube[v].z * ctx + cube[v].y * stx;
 
 				/* Transform the X and Y coordinates to rotate around the Y axis. */
-				cube[v].x += cube[v].z;
-				cube[v].y += cube[v].z;
+				cube[v].x = cube[v].x * cty - cube[v].z * sty;
+//				cube[v].y = cube[v].z * cty + cube[v].x * sty;
+
+				projection[v].x = (camera.z * (cube[v].x - camera.x)) / (camera.z + cube[v].z) + camera.x;
+				projection[v].y = (camera.z * (cube[v].y - camera.y)) / (camera.z + cube[v].z) + camera.y;
+
 			}
 
 			/* Draw the vertices. */
-			SDL_SetRenderDrawColor(renderer, GREEN, 255);
-			int total = (sizeof(cube) / sizeof(vertex));
-			for (int v = 0; v < total; v ++) {
-				for (int r = v; r < total; r ++){
-					line(renderer, cx + cube[v].x, cy + cube[v].y, cx + cube[r].x, cy + cube[r].y, GREEN);
+			for (int v = 0; v < vertices; v ++) {
+				for (int r = v; r < vertices; r ++){
+					line(renderer, origin.x + projection[v].x, origin.y + projection[v].y, origin.x + projection[r].x, origin.y + projection[r].y, v * 100, r * 200, 255);
 				}
 			}
 
