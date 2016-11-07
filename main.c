@@ -83,6 +83,18 @@ int main(int argc, char *argv[]) {
 					case SDLK_d:
 						sp_d();
 						break;
+					case SDLK_i:
+						sp_i();
+						break;
+					case SDLK_k:
+						sp_k();
+						break;
+					case SDLK_j:
+						sp_j();
+						break;
+					case SDLK_l:
+						sp_l();
+						break;
 					default:
 						break;
 				}

@@ -31,6 +31,8 @@ void sp_render(void);
 /* Draws a line to the screen. */
 void sp_line(int x1, int y1, int x2, int y2, int r, int g, int b);
 
+extern struct _p3d cube_pos;
+
 /* Maps a range of values. */
 double sp_map(double x, double in_min, double in_max, double out_min, double out_max);
 
@@ -39,6 +41,10 @@ void sp_w(void);
 void sp_a(void);
 void sp_s(void);
 void sp_d(void);
+void sp_i(void);
+void sp_k(void);
+void sp_j(void);
+void sp_l(void);
 void sp_up(void);
 void sp_down(void);
 void sp_left(void);
